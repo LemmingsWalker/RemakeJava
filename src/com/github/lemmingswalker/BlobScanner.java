@@ -20,6 +20,13 @@ public class BlobScanner {
                            int[] debug_hitpoints) {
 
 
+        final int UP = -img_width;
+        final int DOWN = img_width;
+        final int LEFT = -1;
+        final int RIGHT = 1;
+
+
+
         // todo check input parameters
 
 
@@ -50,13 +57,84 @@ public class BlobScanner {
                     //System.out.println("index: "+index);
 
                     // walk the contour
-                    walk_contour(pixels,
-                                img_width,
-                                index,
-                                threshold_checker,
-                                contour_data,
-                                contour_exist_scan_id_map,
-                                scan_id);
+                    int walker_index = index;
+
+
+                    // we come from the left
+                    int move_direction = UP;
+                    int check_direction = LEFT;
+
+                    if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+
+                    int idx = 0;
+                    contour_data.edge_indexes[idx++] = walker_index;
+
+                    while (true) {
+
+                        //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
+
+                        // check dir free
+                        if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
+                            walker_index += check_direction;
+                            if (walker_index == index) break;
+
+                            contour_data.edge_indexes[idx++] = walker_index;
+                            if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+
+                            // update move and check direction
+                            if (check_direction == RIGHT) {
+                                move_direction = RIGHT;
+                                check_direction = UP;
+                            }
+                            else if (check_direction == DOWN) {
+                                move_direction = DOWN;
+                                check_direction = RIGHT;
+                            }
+                            else if (check_direction == LEFT) {
+                                move_direction = LEFT;
+                                check_direction = DOWN;
+                            }
+                            else if (check_direction == UP) {
+                                move_direction = UP;
+                                check_direction = LEFT;
+                            }
+
+
+                        }
+                        // move dir free
+                        else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
+
+                            walker_index += move_direction;
+                            if (walker_index == index) break;
+
+                            contour_data.edge_indexes[idx++] = walker_index;
+                            if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+
+
+                        }
+                        else {
+                            // we hit a wall, so turn right
+                            if (move_direction == UP) {
+                                move_direction = RIGHT;
+                                check_direction = UP;
+                            }
+                            else if (move_direction == RIGHT) {
+                                move_direction = DOWN;
+                                check_direction = RIGHT;
+                            }
+                            else if (move_direction == DOWN) {
+                                move_direction = LEFT;
+                                check_direction = DOWN;
+                            }
+                            else if (move_direction == LEFT) {
+                                move_direction = UP;
+                                check_direction = LEFT;
+                            }
+                        }
+                    }
+
+
+                    contour_data.length = idx;
 
                     if (contour_data.length > 0) {
 
@@ -70,113 +148,6 @@ public class BlobScanner {
             }
         }
     }
-
-    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-    public static void walk_contour(int[] pixels,
-                             int img_width,
-                             int start_index,
-                             ThresholdChecker threshold_checker,
-                             ContourData contour_data,
-                             int[] contour_exist_scan_id_map,
-                             int scan_id) {
-
-
-        final int UP = -img_width;
-        final int DOWN = img_width;
-        final int LEFT = -1;
-        final int RIGHT = 1;
-
-        int walker_index = start_index;
-
-
-        // we come from the left now, so we could set the move direction to the left and it will find it's right way?
-        // might duplicate start a few times?
-        int move_direction = UP;
-        int check_direction = LEFT;
-
-        if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
-
-        int idx = 0;
-        contour_data.edge_indexes[idx++] = walker_index;
-
-        while (true) {
-
-            //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
-
-            // check dir free
-            if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
-                walker_index += check_direction;
-                if (walker_index == start_index) break;
-
-                contour_data.edge_indexes[idx++] = walker_index;
-                if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
-
-                // update move and check direction
-                if (check_direction == RIGHT) {
-                    move_direction = RIGHT;
-                    check_direction = UP;
-                }
-                else if (check_direction == DOWN) {
-                    move_direction = DOWN;
-                    check_direction = RIGHT;
-                }
-                else if (check_direction == LEFT) {
-                    move_direction = LEFT;
-                    check_direction = DOWN;
-                }
-                else if (check_direction == UP) {
-                    move_direction = UP;
-                    check_direction = LEFT;
-                }
-
-
-            }
-            // move dir free
-            else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
-
-                walker_index += move_direction;
-                if (walker_index == start_index) break;
-
-                contour_data.edge_indexes[idx++] = walker_index;
-                if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
-
-
-            }
-            else {
-                // we hit a wall, so turn right
-                if (move_direction == UP) {
-                    move_direction = RIGHT;
-                    check_direction = UP;
-                }
-                else if (move_direction == RIGHT) {
-                    move_direction = DOWN;
-                    check_direction = RIGHT;
-                }
-                else if (move_direction == DOWN) {
-                    move_direction = LEFT;
-                    check_direction = DOWN;
-                }
-                else if (move_direction == LEFT) {
-                    move_direction = UP;
-                    check_direction = LEFT;
-                }
-            }
-        }
-
-
-        contour_data.length = idx;
-
-        // tmp
-//        contour_data.length = 100;
-//        for (int i = 0; i < contour_data.length; i++) {
-//            contour_data.edge_indexes[i] = start_index+i;
-//        }
-
-
-    }
-
-    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
 }
