@@ -3,251 +3,208 @@ package com.github.lemmingswalker;
 /**
  * Created by doekewartena on 4/27/16.
  */
-
-/*
-
-// add only the indexes that make up the contour?
-
-
-result = index
--1 = end
--2 is end of edge?
-
-
-
-scan only 1 blob, return pixel index of where we ended
- */
-
-
-/*
-
-    // usage:
-
-
-    f
-
-
- */
-
 public class BlobScanner {
 
+    public static void scan(int[] pixels,
+                           int img_width,
+                           int img_height,
+                           int x1,
+                           int y1,
+                           int x2,
+                           int y2,
+                           int y_increment,
+                           ThresholdChecker threshold_checker,
+                           int border_color,
+                           int[] contour_exist_scan_id_map,
+                           int scan_id, // find some good code to random this number?
+                           ContourData contour_data,
+                           ContourDataProcessor contour_data_processor) {
 
 
-    // not here, so we can have the method static?
-    final static int X = 0;
-    final static int Y = 1;
-    final static int WIDTH = 2;
-    final static int HEIGHT = 3;
+        // check input parameters
+        if (x1 == 0          || x1 == -1) x1 = 1;
+        if (y1 == 0          || y1 == -1) y1 = 1;
+        if (x2 == img_width  || x2 == -1) x2 = img_width-1;
+        if (y2 == img_height || y2 == -1) y2 = img_height-1;
 
-
-    interface ThresholdChecker {
-        boolean result_of(int color);
-    }
-
-
-    // remove roi? user can add a border with border_color, then provide a start_index inside the wanted roi
-
-    public int scan(int[] pixels,
-                     int img_width,
-                     int img_height,
-                     int[] roi,
-                     boolean scan_over_x,
-                     int jump_increment,
-                     ThresholdChecker threshold_checker,
-                     int border_color,
-                     int[] contour_exist_scan_id_map,
-                     int scan_id,
-                     int[] result) {
-
-        // check parameters
-
-        //assert result!= null; // todo test
-
-        if (roi != null) {
-            // todo check roi bounds
-        } else {
-            roi = new int[]{0, 0, img_width, img_height};
-        }
-
-        // todo check contour_exist_scan_id_map
-
+        // use assert or not? people never use it
+        assert threshold_checker!= null : "threshold_checker is null";
+        assert contour_data != null;
+        assert contour_data_processor != null;
 
 
         // set up initial values
+        int start_x = x1;
+        int start_y = y1 + y_increment; // misleading or convenient?
+        int max_x   = x1 + (x2 - x1);
+        int max_y   = y1 + (y2 - y1);
 
-        int result_index = 0;
+
+        // find an edge
+        //boolean reset_val = threshold_checker.result_of(border_color);
+        boolean reset_val = false;
+
+        boolean last_val_pass = reset_val; // name free?
+
+
+        for (int y = start_y; y < max_y; y += y_increment) {
+
+
+
+            for (int x = start_x; x < max_x; x++) {
+
+                int index = y * img_width + x;
+                if (contour_exist_scan_id_map[index] == scan_id) continue;
+
+                int current_color = pixels[index];
+                boolean current_val_pass = threshold_checker.result_of(current_color);
+
+                if (current_val_pass && !last_val_pass) { // edge or corner
+
+                    System.out.println("index: "+index);
+
+                    // walk the contour
+                    walk_contour(pixels,
+                                img_width,
+                                index,
+                                threshold_checker,
+                                contour_data,
+                                contour_exist_scan_id_map,
+                                scan_id);
+
+                    if (contour_data.length > 0) {
+
+                        // process the result
+                        boolean should_continue = contour_data_processor.process(contour_data);
+                        if (!should_continue) {
+                            return;
+                        }
+
+//                        // update contour exist map: if we didn't return!
+//                        for (int i = 0; i < contour_data.length; i++) {
+//                            contour_exist_scan_id_map[contour_data.edge_indexes[i]] = scan_id;
+//                        }
+                    }
+
+                }
+                last_val_pass = current_val_pass;
+            }
+            last_val_pass = reset_val;
+        }
+    }
+
+    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+    public static void walk_contour(int[] pixels,
+                             int img_width,
+                             int start_index,
+                             ThresholdChecker threshold_checker,
+                             ContourData contour_data,
+                             int[] contour_exist_scan_id_map,
+                             int scan_id) {
+
 
         final int UP = -img_width;
         final int DOWN = img_width;
         final int LEFT = -1;
         final int RIGHT = 1;
 
-        int x_increment;
-        int y_increment;
-        int start_x;
-        int start_y;
-        int max_x;
-        int max_y;
-
-        if (scan_over_x) {
-            x_increment = 1;
-            y_increment = jump_increment;
-            start_x = roi[0];
-            start_y = roi[1] + jump_increment;
-        } else {
-            x_increment = jump_increment;
-            y_increment = 1;
-            start_x = roi[0] + jump_increment;
-            start_y = roi[1];
-        }
-
-        max_x = roi[0] + roi[2];
-        max_y = roi[1] + roi[3];
-
-        // start scanning
-
-        boolean last_val_pass = threshold_checker.result_of(border_color);  // name free?
-
-        for (int x = start_x; x < max_x; x += x_increment) {
-            for (int y = start_y; y < max_y; y += y_increment) {
-
-                int index = y * img_width + x;
-                int current_color = pixels[index];
-
-                boolean current_val_pass = threshold_checker.result_of(current_color);
-
-                // if true we hit an edge or corner
-                if (current_val_pass && !last_val_pass) {
-
-                    if (contour_exist_scan_id_map[index] == scan_id) continue;
-
-                    // todo still use a blob_creator?
-
-                    int walker_index = index;
-                    contour_exist_scan_id_map[walker_index] = scan_id;
-
-                    //int px = walker_index % img_width;
-                    //int py = (walker_index - x) / img_width;
-
-                    boolean down_is_free = threshold_checker.result_of(pixels[index + DOWN]);
-                    boolean up_is_free = threshold_checker.result_of(pixels[index + UP]);
-                    boolean left_is_free = threshold_checker.result_of(pixels[index + LEFT]);
-                    boolean right_is_free = threshold_checker.result_of(pixels[index + RIGHT]);
-
-                    int move_direction;
-                    int check_direction;
-
-                    if (down_is_free && !right_is_free) { // DOWN free
-                        move_direction = DOWN;
-                        check_direction = RIGHT;
-                    }
-                    else if (right_is_free && !up_is_free) { // RIGHT free
-                        move_direction = RIGHT;
-                        check_direction = UP;
-                    }
-                    else if (up_is_free && !left_is_free ) { // UP free
-                        move_direction = UP;
-                        check_direction = LEFT;
-                    }
-
-                    else if (left_is_free && !down_is_free) { // LEFT free
-                        move_direction = LEFT;
-                        check_direction = DOWN;
-                    }
-                    else {
-                        // isolated pixel
-                        // is this a problem?
-                        // it might if we use a blobCreator again !important
-                        continue;
-                    }
-
-                    // todo c++ etc.
+        int walker_index = start_index;
 
 
+        // we come from the left now, so we could set the move direction to the left and it will find it's right way?
+        // might duplicate start a few times?
+        int move_direction = UP;
+        int check_direction = LEFT;
 
-                    while (true) {
+        contour_exist_scan_id_map[walker_index] = scan_id;
 
-                        boolean move_dir_free = threshold_checker.result_of(pixels[index + move_direction]);
-                        if (move_dir_free) {
-                             // add edge
-                            // ...
-                            contour_exist_scan_id_map[walker_index] = scan_id;
+        int idx = 0;
+        contour_data.edge_indexes[idx++] = walker_index;
 
-                            walker_index += move_direction;
-                            //px = walker_index % img_width;
-                            //py = (walker_index - x) / img_width;
-
-                            if (walker_index == index) break; // where back at the start
-
-                            boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
-                            if (check_dir_free) {
-
-                                // add px, py
-
-                                walker_index += check_direction;
-
-                                if (walker_index == index) break; // where back at the start
+        int save_count = 0;
 
 
+        while (true) {
+
+            //if (save_count++ > 1000) break;
 
 
+            //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
 
+            // check dir free
+            if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
+                walker_index += check_direction;
+                if (walker_index == start_index) break;
 
+                contour_data.edge_indexes[idx++] = walker_index;
+                contour_exist_scan_id_map[walker_index] = scan_id;
 
-                            }
-
-
-
-
-
-
-
-
-                        }
-
-
-                    }
-
-
-
-
-
-
-
+                // update move and check direction
+                if (check_direction == RIGHT) {
+                    move_direction = RIGHT;
+                    check_direction = UP;
+                }
+                else if (check_direction == DOWN) {
+                    move_direction = DOWN;
+                    check_direction = RIGHT;
+                }
+                else if (check_direction == LEFT) {
+                    move_direction = LEFT;
+                    check_direction = DOWN;
+                }
+                else if (check_direction == UP) {
+                    move_direction = UP;
+                    check_direction = LEFT;
                 }
 
-                last_val_pass = current_val_pass;
+
+            }
+            // move dir free
+            else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
+
+                walker_index += move_direction;
+                if (walker_index == start_index) break;
+
+                contour_data.edge_indexes[idx++] = walker_index;
+                contour_exist_scan_id_map[walker_index] = scan_id;
+
+
+            }
+            else {
+                // we hit a wall, so turn right
+                if (move_direction == UP) {
+                    move_direction = RIGHT;
+                    check_direction = UP;
+                }
+                else if (move_direction == RIGHT) {
+                    move_direction = DOWN;
+                    check_direction = RIGHT;
+                }
+                else if (move_direction == DOWN) {
+                    move_direction = LEFT;
+                    check_direction = DOWN;
+                }
+                else if (move_direction == LEFT) {
+                    move_direction = UP;
+                    check_direction = LEFT;
+                }
             }
         }
 
 
-        return -1;
-    }
+        contour_data.length = idx;
 
-    // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-    public void walk_contour(int[] pixels,
-                             int img_width,
-                             int img_height,
-                             int[] roi,
-                             boolean scan_over_x,
-                             int jump_increment,
-                             ThresholdChecker threshold_checker,
-                             int border_color,
-                             int[] contour_exist_scan_id_map,
-                             int scan_id,
-                             int[] result) {
-
+        // tmp
+//        contour_data.length = 100;
+//        for (int i = 0; i < contour_data.length; i++) {
+//            contour_data.edge_indexes[i] = start_index+i;
+//        }
 
 
     }
 
-
-
     // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
-
-
 
 
 }
