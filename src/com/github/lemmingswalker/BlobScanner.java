@@ -7,7 +7,6 @@ public class BlobScanner {
 
     public static void scan(int[] pixels,
                            int img_width,
-                           int img_height,
                            int x1,
                            int y1,
                            int x2,
@@ -17,30 +16,38 @@ public class BlobScanner {
                            int[] contour_exist_scan_id_map,
                            int scan_id, // find some good code to random this number?
                            ContourData contour_data,
-                           ContourDataProcessor contour_data_processor) {
+                           ContourDataProcessor contour_data_processor,
+                           int[] debug_hitpoints) {
 
 
         // todo check input parameters
 
+
+
+
         // find an edge
         for (int y = y1; y < y2; y += y_increment) {
 
-            boolean last_val_pass = false;
+            boolean current_val_pass = false; // used to set last_val_pass
 
             for (int x = x1; x < x2; x++) {
 
+                boolean last_val_pass = current_val_pass;
+
                 int index = y * img_width + x;
-                if (contour_exist_scan_id_map[index] == scan_id) break;
-
                 int current_color = pixels[index];
+                current_val_pass = threshold_checker.result_of(current_color);
 
-                boolean current_val_pass = threshold_checker.result_of(current_color);
-
-
-                // >>>>>>>>>>>>>
                 if (current_val_pass && !last_val_pass) { // edge or corner
 
-                    System.out.println("index: "+index);
+                    if (contour_exist_scan_id_map[index] == scan_id) {
+                        continue;
+                    }
+
+
+                    debug_hitpoints[index] = -256;
+                    contour_exist_scan_id_map[index] = -256;
+                    //System.out.println("index: "+index);
 
                     // walk the contour
                     walk_contour(pixels,
@@ -58,15 +65,8 @@ public class BlobScanner {
                         if (!should_continue) {
                             return;
                         }
-
-//                        // update contour exist map: if we didn't return!
-//                        for (int i = 0; i < contour_data.length; i++) {
-//                            contour_exist_scan_id_map[contour_data.edge_indexes[i]] = scan_id;
-//                        }
                     }
-
                 }
-                last_val_pass = current_val_pass;
             }
         }
     }
@@ -95,18 +95,12 @@ public class BlobScanner {
         int move_direction = UP;
         int check_direction = LEFT;
 
-        contour_exist_scan_id_map[walker_index] = scan_id;
+        if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
 
         int idx = 0;
         contour_data.edge_indexes[idx++] = walker_index;
 
-        int save_count = 0;
-
-
         while (true) {
-
-            //if (save_count++ > 1000) break;
-
 
             //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
 
@@ -116,7 +110,7 @@ public class BlobScanner {
                 if (walker_index == start_index) break;
 
                 contour_data.edge_indexes[idx++] = walker_index;
-                contour_exist_scan_id_map[walker_index] = scan_id;
+                if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
 
                 // update move and check direction
                 if (check_direction == RIGHT) {
@@ -145,7 +139,7 @@ public class BlobScanner {
                 if (walker_index == start_index) break;
 
                 contour_data.edge_indexes[idx++] = walker_index;
-                contour_exist_scan_id_map[walker_index] = scan_id;
+                if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
 
 
             }

@@ -18,6 +18,7 @@ public class Test_01 extends PApplet {
     PGraphics img;
     PGraphics dbg_img;
     PGraphics edge_exist_id_map;
+    PGraphics hitpoints;
 
 
     int scan_results = 0;
@@ -25,6 +26,7 @@ public class Test_01 extends PApplet {
     int IMG = 0;
     int RESULT = 1;
     int EDGE_MAP = 2;
+    int HIT_POINTS = 3;
 
     int display_mode = RESULT;
 
@@ -53,7 +55,8 @@ public class Test_01 extends PApplet {
         img.fill(255);
         for (int i=0;i<20;i++) {
             float r = random(50);
-            img.ellipse(random(img.width), random(img.height), r, r);
+            //img.ellipse(random(img.width), random(img.height), r, r);
+            img.rect(random(img.width), random(img.height), r, r);
         }
         img.noFill();
         img.stroke(0);
@@ -72,6 +75,12 @@ public class Test_01 extends PApplet {
         edge_exist_id_map.endDraw();
         edge_exist_id_map.loadPixels();
 
+        hitpoints = createGraphics(640, 480);
+        hitpoints.beginDraw();
+        hitpoints.background(0);
+        hitpoints.endDraw();
+        hitpoints.loadPixels();
+
 
 //        int x1 = 1;
 //        int y1 = 1;
@@ -82,7 +91,7 @@ public class Test_01 extends PApplet {
         int x2 = width;
         int y2 = height;
 
-        int y_inc = 5;
+        int y_inc = 10;
         //int[] contour_id_map = new int[img.width * img.height];
         int scan_id = color(255,0,0);
 
@@ -131,7 +140,6 @@ public class Test_01 extends PApplet {
         BlobScanner.scan(
                 img.pixels,
                 img.width,
-                img.height,
                 x1,
                 y1,
                 x2,
@@ -141,7 +149,8 @@ public class Test_01 extends PApplet {
                 edge_exist_id_map.pixels,
                 scan_id,
                 contour_data,
-                contour_data_processor_2);
+                contour_data_processor_2,
+                hitpoints.pixels);
 
 
 
@@ -163,7 +172,9 @@ public class Test_01 extends PApplet {
         else if (display_mode == EDGE_MAP) {
             image(edge_exist_id_map, 0, 0, img.width * scale, img.height * scale);
         }
-
+        else if (display_mode == HIT_POINTS) {
+            image(hitpoints, 0, 0, img.width * scale, img.height * scale);
+        }
 
         noLoop();
     }
@@ -181,7 +192,7 @@ public class Test_01 extends PApplet {
         else if (key == '0') scale = 10;
         else {
             display_mode++;
-            if (display_mode == 3) display_mode = 0;
+            if (display_mode == 4) display_mode = 0;
         }
 
         redraw();
