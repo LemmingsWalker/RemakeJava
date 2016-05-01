@@ -5,6 +5,10 @@ package com.github.lemmingswalker;
  */
 public class BlobScanner {
 
+    public static boolean debug = true;
+    public static int[] debug_hitpoints;
+
+
     public static void scan(int[] pixels,
                            int img_width,
                            int x1,
@@ -14,10 +18,9 @@ public class BlobScanner {
                            int y_increment,
                            ThresholdChecker threshold_checker,
                            int[] contour_exist_scan_id_map,
-                           int scan_id, // find some good code to random this number?
+                           int scan_id,
                            ContourData contour_data,
-                           ContourDataProcessor contour_data_processor,
-                           int[] debug_hitpoints) {
+                           ContourDataProcessor contour_data_processor) {
 
 
         final int UP = -img_width;
@@ -28,7 +31,6 @@ public class BlobScanner {
 
 
         // todo check input parameters
-
 
 
 
@@ -45,43 +47,58 @@ public class BlobScanner {
                 int current_color = pixels[index];
                 current_val_pass = threshold_checker.result_of(current_color);
 
-                if (current_val_pass && !last_val_pass) { // edge or corner
+                if (current_val_pass && !last_val_pass) { // true if edge or corner
+
+                    if (debug) debug_hitpoints[index] = -65536;
 
                     if (contour_exist_scan_id_map[index] == scan_id) {
                         continue;
                     }
 
-
-                    debug_hitpoints[index] = -256;
-                    contour_exist_scan_id_map[index] = -256;
-                    //System.out.println("index: "+index);
-
-                    // walk the contour
+                    // from here on walk the contour
                     int walker_index = index;
+
+                    // single pixel test
+                    if (!threshold_checker.result_of(pixels[walker_index + LEFT])  &&
+                        !threshold_checker.result_of(pixels[walker_index + UP])    &&
+                        !threshold_checker.result_of(pixels[walker_index + RIGHT]) &&
+                        !threshold_checker.result_of(pixels[walker_index + DOWN])) {
+                        continue;
+                    }
 
 
                     // we come from the left
                     int move_direction = UP;
                     int check_direction = LEFT;
 
-                    if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+                    contour_exist_scan_id_map[walker_index] = scan_id;
 
                     int idx = 0;
                     contour_data.edge_indexes[idx++] = walker_index;
 
+
+                    //@todo temp
+                    int while_hang_count = 0;
+
                     while (true) {
+
+                        while_hang_count++;
+                        if (while_hang_count > 1024*768) {
+                            int b = 10;
+                        }
 
                         //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
 
-                        // check dir free
+                        // check dir is free
                         if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
+
                             walker_index += check_direction;
                             if (walker_index == index) break;
 
                             contour_data.edge_indexes[idx++] = walker_index;
-                            if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+                            contour_exist_scan_id_map[walker_index] = scan_id;
 
-                            // update move and check direction
+                            // update move direction and update check direction
                             if (check_direction == RIGHT) {
                                 move_direction = RIGHT;
                                 check_direction = UP;
@@ -101,18 +118,19 @@ public class BlobScanner {
 
 
                         }
-                        // move dir free
+                        // move dir is free
                         else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
 
                             walker_index += move_direction;
                             if (walker_index == index) break;
 
                             contour_data.edge_indexes[idx++] = walker_index;
-                            if (contour_exist_scan_id_map != null) contour_exist_scan_id_map[walker_index] = scan_id;
+                            contour_exist_scan_id_map[walker_index] = scan_id;
 
 
                         }
                         else {
+
                             // we hit a wall, so turn right
                             if (move_direction == UP) {
                                 move_direction = RIGHT;
