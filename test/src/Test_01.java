@@ -17,9 +17,19 @@ public class Test_01 extends PApplet {
 
     PGraphics img;
     PGraphics dbg_img;
+    PGraphics edge_exist_id_map;
 
 
     int scan_results = 0;
+
+    int IMG = 0;
+    int RESULT = 1;
+    int EDGE_MAP = 2;
+
+    int display_mode = RESULT;
+
+    int scale = 5;
+
 
 
     @Override
@@ -46,10 +56,9 @@ public class Test_01 extends PApplet {
             img.ellipse(random(img.width), random(img.height), r, r);
         }
         img.noFill();
-        img.stroke(255,0,0);
+        img.stroke(0);
         img.rect(0,0,img.width-1, img.height-1);
         img.endDraw();
-
         img.loadPixels();
 
         dbg_img = createGraphics(640, 480);
@@ -57,15 +66,25 @@ public class Test_01 extends PApplet {
         dbg_img.image(img, 0, 0);
         dbg_img.endDraw();
 
+        edge_exist_id_map = createGraphics(640, 480);
+        edge_exist_id_map.beginDraw();
+        edge_exist_id_map.background(0);
+        edge_exist_id_map.endDraw();
+        edge_exist_id_map.loadPixels();
 
-        int x1 = 1;
-        int y1 = 1;
-        int x2 = width-2;
-        int y2 = height-2;
-        int y_inc = 10;
-        int border_color = color(255,0,0);
-        int[] contour_id_map = new int[img.width * img.height];
-        int scan_id = 1;
+
+//        int x1 = 1;
+//        int y1 = 1;
+//        int x2 = width-2;
+//        int y2 = height-2;
+        int x1 = 0;
+        int y1 = 0;
+        int x2 = width;
+        int y2 = height;
+
+        int y_inc = 5;
+        //int[] contour_id_map = new int[img.width * img.height];
+        int scan_id = color(255,0,0);
 
 
         ThresholdChecker thresholdChecker = color -> {
@@ -99,23 +118,13 @@ public class Test_01 extends PApplet {
 
 
         ContourDataProcessor contour_data_processor_2 = contourData -> {
-            boolean bugged = contourData.length == 4;
-
-            int color = bugged ? color(0,0,255) : color(0,255,0);
-
-
+            int color = color(0,255,0);
             scan_results++;
-
             println("contour_data.length: "+contour_data.length);
             for (int i = 0; i < contour_data.length; i++) {
                 dbg_img.pixels[contour_data.edge_indexes[i]] = color;
             }
-            if (bugged) {
-                dbg_img.pixels[contour_data.edge_indexes[0]] = color(255,255,0);
-
-            }
-            if (scan_results < 50) return true;
-            return false; // for now stop after the first one
+            return true;
         };
 
 
@@ -129,23 +138,54 @@ public class Test_01 extends PApplet {
                 y2,
                 y_inc,
                 thresholdChecker,
-                border_color,
-                contour_id_map,
+                edge_exist_id_map.pixels,
                 scan_id,
                 contour_data,
                 contour_data_processor_2);
 
 
 
+        surface.setTitle("scan_results: "+scan_results);
+
     }
 
     @Override
     public void draw() {
-        int scale = 16;
-        image(dbg_img, 0, 0, img.width*scale, img.height*scale);
+        background(0);
+
+
+        if (display_mode == IMG) {
+            image(img, 0, 0, img.width * scale, img.height * scale);
+        }
+        else if (display_mode == RESULT) {
+            image(dbg_img, 0, 0, img.width*scale, img.height*scale);
+        }
+        else if (display_mode == EDGE_MAP) {
+            image(edge_exist_id_map, 0, 0, img.width * scale, img.height * scale);
+        }
+
+
         noLoop();
     }
 
+    public void keyPressed() {
+        if (key == '1') scale = 1;
+        else if (key == '2') scale = 2;
+        else if (key == '3') scale = 3;
+        else if (key == '4') scale = 4;
+        else if (key == '5') scale = 5;
+        else if (key == '6') scale = 6;
+        else if (key == '7') scale = 7;
+        else if (key == '8') scale = 8;
+        else if (key == '9') scale = 9;
+        else if (key == '0') scale = 10;
+        else {
+            display_mode++;
+            if (display_mode == 3) display_mode = 0;
+        }
+
+        redraw();
+    }
 
 
 

@@ -14,51 +14,30 @@ public class BlobScanner {
                            int y2,
                            int y_increment,
                            ThresholdChecker threshold_checker,
-                           int border_color,
                            int[] contour_exist_scan_id_map,
                            int scan_id, // find some good code to random this number?
                            ContourData contour_data,
                            ContourDataProcessor contour_data_processor) {
 
 
-        // check input parameters
-        if (x1 == 0          || x1 == -1) x1 = 1;
-        if (y1 == 0          || y1 == -1) y1 = 1;
-        if (x2 == img_width  || x2 == -1) x2 = img_width-1;
-        if (y2 == img_height || y2 == -1) y2 = img_height-1;
-
-        // use assert or not? people never use it
-        assert threshold_checker!= null : "threshold_checker is null";
-        assert contour_data != null;
-        assert contour_data_processor != null;
-
-
-        // set up initial values
-        int start_x = x1;
-        int start_y = y1 + y_increment; // misleading or convenient?
-        int max_x   = x1 + (x2 - x1);
-        int max_y   = y1 + (y2 - y1);
-
+        // todo check input parameters
 
         // find an edge
-        //boolean reset_val = threshold_checker.result_of(border_color);
-        boolean reset_val = false;
+        for (int y = y1; y < y2; y += y_increment) {
 
-        boolean last_val_pass = reset_val; // name free?
+            boolean last_val_pass = false;
 
-
-        for (int y = start_y; y < max_y; y += y_increment) {
-
-
-
-            for (int x = start_x; x < max_x; x++) {
+            for (int x = x1; x < x2; x++) {
 
                 int index = y * img_width + x;
-                if (contour_exist_scan_id_map[index] == scan_id) continue;
+                if (contour_exist_scan_id_map[index] == scan_id) break;
 
                 int current_color = pixels[index];
+
                 boolean current_val_pass = threshold_checker.result_of(current_color);
 
+
+                // >>>>>>>>>>>>>
                 if (current_val_pass && !last_val_pass) { // edge or corner
 
                     System.out.println("index: "+index);
@@ -89,7 +68,6 @@ public class BlobScanner {
                 }
                 last_val_pass = current_val_pass;
             }
-            last_val_pass = reset_val;
         }
     }
 
