@@ -133,14 +133,23 @@ public class Test_01 extends PApplet {
             //println("!");
             img.beginDraw();
             img.background(0);
-            img.noStroke();
-            img.fill(255);
-            noiseSeed(1);
-            noise_scale += 0.00001f;
-            for (int i=0;i<5000;i++) {
-                float r = noise(i*noise_scale) * 15;
-                img.ellipse(noise((i+256)*noise_scale)*img.width, noise((i+1024)*noise_scale)*img.height, r, r);
-                //img.rect(random(img.width), random(img.height), r, r);
+            if (false) {
+                img.noStroke();
+                img.fill(255);
+                noiseSeed(1);
+                noise_scale += 0.00001f;
+                for (int i=0;i<5000;i++) {
+                    float r = noise(i*noise_scale) * 15;
+                    img.ellipse(noise((i+256)*noise_scale)*img.width, noise((i+1024)*noise_scale)*img.height, r, r);
+                    //img.rect(random(img.width), random(img.height), r, r);
+                }
+            }
+            if (true) {
+                img.stroke(255);
+                img.noFill();
+                img.line(50,50, 50,600);
+                img.line(50,100, 250,100);
+
             }
             img.noFill();
             img.stroke(0);
@@ -157,7 +166,7 @@ public class Test_01 extends PApplet {
 //        int x2 = width-2;
 //        int y2 = height-2;
         int x1 = 0;
-        int y1 = 0;
+        int y1 = 100;
         int x2 = width;
         int y2 = height;
 

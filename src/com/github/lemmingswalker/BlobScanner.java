@@ -52,6 +52,7 @@ public class BlobScanner {
                     if (debug) debug_hitpoints[index] = -65536;
 
                     if (contour_exist_scan_id_map[index] == scan_id) {
+                        if (debug) debug_hitpoints[index] = -256;
                         continue;
                     }
 
@@ -59,12 +60,31 @@ public class BlobScanner {
                     int walker_index = index;
 
                     // single pixel test
+                    /*
                     if (!threshold_checker.result_of(pixels[walker_index + LEFT])  &&
                         !threshold_checker.result_of(pixels[walker_index + UP])    &&
                         !threshold_checker.result_of(pixels[walker_index + RIGHT]) &&
                         !threshold_checker.result_of(pixels[walker_index + DOWN])) {
                         continue;
                     }
+                    */
+
+                    int neighbour_count = 0;
+                    if (threshold_checker.result_of(pixels[walker_index + LEFT]))  neighbour_count++;
+                    if (threshold_checker.result_of(pixels[walker_index + UP]))    neighbour_count++;
+                    if (threshold_checker.result_of(pixels[walker_index + RIGHT])) neighbour_count++;
+                    if (threshold_checker.result_of(pixels[walker_index + DOWN]))  neighbour_count++;
+
+                    if (neighbour_count == 0) {
+                        continue; // single pixel
+                    }
+
+                    int visit_start_n_times = neighbour_count;
+                    int n_of_times_start_visited = 0;
+                    // could it rotate on a start? in that case the
+                    // best way would be to check if that is the case and set the
+                    // visit_start_n_times according to that
+
 
 
                     // we come from the left
@@ -93,7 +113,11 @@ public class BlobScanner {
                         if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
 
                             walker_index += check_direction;
-                            if (walker_index == index) break;
+                            if (walker_index == index) {
+                                // break;
+                                n_of_times_start_visited++;
+                                if (n_of_times_start_visited == visit_start_n_times) break;
+                            }
 
                             contour_data.edge_indexes[idx++] = walker_index;
                             contour_exist_scan_id_map[walker_index] = scan_id;
@@ -122,7 +146,11 @@ public class BlobScanner {
                         else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
 
                             walker_index += move_direction;
-                            if (walker_index == index) break;
+                            if (walker_index == index) {
+                                // break;
+                                n_of_times_start_visited++;
+                                if (n_of_times_start_visited == visit_start_n_times) break;
+                            }
 
                             contour_data.edge_indexes[idx++] = walker_index;
                             contour_exist_scan_id_map[walker_index] = scan_id;
