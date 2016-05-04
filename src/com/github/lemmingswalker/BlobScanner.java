@@ -28,11 +28,7 @@ public class BlobScanner {
         final int LEFT = -1;
         final int RIGHT = 1;
 
-
-
         // todo check input parameters
-
-
 
         // find an edge
         for (int y = y1; y < y2; y += y_increment) {
@@ -60,15 +56,6 @@ public class BlobScanner {
                     int walker_index = index;
 
                     // single pixel test
-                    /*
-                    if (!threshold_checker.result_of(pixels[walker_index + LEFT])  &&
-                        !threshold_checker.result_of(pixels[walker_index + UP])    &&
-                        !threshold_checker.result_of(pixels[walker_index + RIGHT]) &&
-                        !threshold_checker.result_of(pixels[walker_index + DOWN])) {
-                        continue;
-                    }
-                    */
-
                     int neighbour_count = 0;
                     if (threshold_checker.result_of(pixels[walker_index + LEFT]))  neighbour_count++;
                     if (threshold_checker.result_of(pixels[walker_index + UP]))    neighbour_count++;
@@ -79,14 +66,6 @@ public class BlobScanner {
                         continue; // single pixel
                     }
 
-                    int visit_start_n_times = neighbour_count;
-                    int n_of_times_start_visited = 0;
-                    // could it rotate on a start? in that case the
-                    // best way would be to check if that is the case and set the
-                    // visit_start_n_times according to that
-
-
-
                     // we come from the left
                     int move_direction = UP;
                     int check_direction = LEFT;
@@ -96,87 +75,75 @@ public class BlobScanner {
                     int idx = 0;
                     contour_data.edge_indexes[idx++] = walker_index;
 
+                    int first_move = 0;
 
-                    //@todo temp
-                    int while_hang_count = 0;
+                    boolean do_test_against_first_move = false;
 
                     while (true) {
 
-                        while_hang_count++;
-                        if (while_hang_count > 1024*768) {
-                            int b = 10;
-                        }
+                        int next_index = -1;
 
-                        //boolean check_dir_free = threshold_checker.result_of(pixels[walker_index + check_direction]);
+                        while (next_index == -1) {
 
-                        // check dir is free
-                        if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
+                            if (threshold_checker.result_of(pixels[walker_index + check_direction])) {
 
-                            walker_index += check_direction;
-                            if (walker_index == index) {
-                                // break;
-                                n_of_times_start_visited++;
-                                if (n_of_times_start_visited == visit_start_n_times) break;
+                                next_index = walker_index + check_direction;
+
+                                if (check_direction == RIGHT) {
+                                    move_direction = RIGHT;
+                                    check_direction = UP;
+                                } else if (check_direction == DOWN) {
+                                    move_direction = DOWN;
+                                    check_direction = RIGHT;
+                                } else if (check_direction == LEFT) {
+                                    move_direction = LEFT;
+                                    check_direction = DOWN;
+                                } else if (check_direction == UP) {
+                                    move_direction = UP;
+                                    check_direction = LEFT;
+                                }
                             }
-
-                            contour_data.edge_indexes[idx++] = walker_index;
-                            contour_exist_scan_id_map[walker_index] = scan_id;
-
-                            // update move direction and update check direction
-                            if (check_direction == RIGHT) {
-                                move_direction = RIGHT;
-                                check_direction = UP;
+                            else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
+                                next_index = walker_index + move_direction;
                             }
-                            else if (check_direction == DOWN) {
-                                move_direction = DOWN;
-                                check_direction = RIGHT;
-                            }
-                            else if (check_direction == LEFT) {
-                                move_direction = LEFT;
-                                check_direction = DOWN;
-                            }
-                            else if (check_direction == UP) {
-                                move_direction = UP;
-                                check_direction = LEFT;
-                            }
-
-
-                        }
-                        // move dir is free
-                        else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
-
-                            walker_index += move_direction;
-                            if (walker_index == index) {
-                                // break;
-                                n_of_times_start_visited++;
-                                if (n_of_times_start_visited == visit_start_n_times) break;
-                            }
-
-                            contour_data.edge_indexes[idx++] = walker_index;
-                            contour_exist_scan_id_map[walker_index] = scan_id;
-
-
-                        }
-                        else {
-
-                            // we hit a wall, so turn right
-                            if (move_direction == UP) {
-                                move_direction = RIGHT;
-                                check_direction = UP;
-                            }
-                            else if (move_direction == RIGHT) {
-                                move_direction = DOWN;
-                                check_direction = RIGHT;
-                            }
-                            else if (move_direction == DOWN) {
-                                move_direction = LEFT;
-                                check_direction = DOWN;
-                            }
-                            else if (move_direction == LEFT) {
-                                move_direction = UP;
-                                check_direction = LEFT;
+                            else {
+                                if (move_direction == UP) {
+                                    move_direction = RIGHT;
+                                    check_direction = UP;
+                                } else if (move_direction == RIGHT) {
+                                    move_direction = DOWN;
+                                    check_direction = RIGHT;
+                                } else if (move_direction == DOWN) {
+                                    move_direction = LEFT;
+                                    check_direction = DOWN;
+                                } else if (move_direction == LEFT) {
+                                    move_direction = UP;
+                                    check_direction = LEFT;
+                                }
                             }
                         }
+
+
+                        int the_move = next_index - walker_index;
+                        walker_index += the_move;
+
+
+                        if (first_move == 0) {
+                            first_move = the_move;
+                        }
+                        else if (do_test_against_first_move) {
+                            if (the_move == first_move) {
+                                break;
+                            }
+                        }
+                        else if (walker_index == index) {
+                            // we need the next index to perform the test
+                            do_test_against_first_move = true;
+                        }
+
+                        contour_data.edge_indexes[idx++] = walker_index;
+                        contour_exist_scan_id_map[walker_index] = scan_id;
+
                     }
 
 
@@ -194,6 +161,7 @@ public class BlobScanner {
             }
         }
     }
+
 
 
 }
