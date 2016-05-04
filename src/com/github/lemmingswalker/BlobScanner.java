@@ -74,6 +74,7 @@ public class BlobScanner {
 
                     int idx = 0;
                     contour_data.edge_indexes[idx++] = walker_index;
+                    contour_data.n_of_corners = 0;
 
                     int first_move = 0;
 
@@ -82,6 +83,7 @@ public class BlobScanner {
                     while (true) {
 
                         int next_index = -1;
+                        boolean previous_was_corner = false;
 
                         while (next_index == -1) {
 
@@ -102,6 +104,8 @@ public class BlobScanner {
                                     move_direction = UP;
                                     check_direction = LEFT;
                                 }
+
+                                previous_was_corner = true;
                             }
                             else if (threshold_checker.result_of(pixels[walker_index + move_direction])) {
                                 next_index = walker_index + move_direction;
@@ -120,9 +124,13 @@ public class BlobScanner {
                                     move_direction = UP;
                                     check_direction = LEFT;
                                 }
+                                previous_was_corner = true;
                             }
                         }
 
+                        if (previous_was_corner) {
+                            contour_data.corner_indexes[contour_data.n_of_corners++] = walker_index;
+                        }
 
                         int the_move = next_index - walker_index;
                         walker_index += the_move;
@@ -145,7 +153,6 @@ public class BlobScanner {
                         contour_exist_scan_id_map[walker_index] = scan_id;
 
                     }
-
 
                     contour_data.length = idx;
 
