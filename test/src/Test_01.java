@@ -8,6 +8,141 @@ import processing.core.PGraphics;
 /**
  * Created by doekewartena on 4/28/16.
  */
+/*
+INNER BLOB TEST:
+
+-use AAARRRGGGBBB
+2 parts for scan_id, 2 part for blob_id?
+
+that would mean 65536 scan_id's and 65536 blob_id's?
+-------
+what if we use a new scan_id for each blob we scan?
+We can check if we scanned a blob before with:
+
+if (scan_id >= start_scan_id)
+
+then:
+
+
+[ ][1][ ][ ][2][ ][ ][ ][ ][ ][2][ ][ ][1][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+
+
+
+--------
+blendMode REPLACE (on img)
+
+
+
+
+
+
+
+-we first need to know if a blob is closed or not
+
+
+ */
+
+/*
+BLOB CLOSED
+- we always meet the start...
+-can we calculate based on boundingbox and length?
+
+ */
+
+/*
+ CORNERS
+-check old method, should be quite familiar (start is a bitch?)
+
+
+ */
+
+/*
+
+count_kernel
+dir_kernel
+
+
+[X][ ][X]
+[X][*][ ]
+[X][ ][X]
+
+
+
+int first_move;
+
+
+
+
+if (walker_index == start_index) {
+
+    if (next_move  == first_move) {
+        // where done
+        break;
+    }
+}
+
+
+
+
+
+
+
+
+if (stop_on_first_return_at_start) {
+
+}
+
+  // check also needs to be updated
+    /*
+    class Step {
+        int new_move_dir;
+        int new_check_dir;
+        int new_walker_index;
+    }
+
+     */
+
+    /*
+
+    move_dir = next_index - last_index;
+
+     */
+
+    /*
+
+    class Walker {
+        int move_direction;
+        int check_direction;
+    }
+
+
+    class ImageData {
+        int width;
+    }
+
+
+
+     */
+
+
+    /*
+
+    int first_move;
+
+
+if (walker_index == start_index) {
+
+    if (next_move  == first_move) {
+        // where done
+        break;
+    }
+}
+     */
+
+
+
+
+
 public class Test_01 extends PApplet {
 
     public static void main(String[] args) {
@@ -39,6 +174,7 @@ public class Test_01 extends PApplet {
     ContourData contour_data;
     ContourDataProcessor contour_data_processor;
 
+    int scan_id = MIN_INT;
 
     @Override
     public void settings() {
@@ -82,15 +218,24 @@ public class Test_01 extends PApplet {
 
         contour_data = new ContourData();
         contour_data.edge_indexes = new int[img.width*img.height/2];  // todo, calculate worst case length for blob (which would be a space filling curve)
-        contour_data.is_corner = new boolean[img.width*img.height/2];
+        contour_data.corner_indexes = new int[img.width*img.height/2]; // todo, way to big
+        //contour_data.is_corner = new boolean[img.width*img.height/2];
 
 
         contour_data_processor = contourData -> {
             int color = color(0,255,0);
             scan_results++;
             //  println("contour_data.length: "+contour_data.length);
-            for (int i = 0; i < contour_data.length; i++) {
-                dbg_img.pixels[contour_data.edge_indexes[i]] = color;
+
+            if (true) {
+                for (int i = 0; i < contour_data.length; i++) {
+                    dbg_img.pixels[contour_data.edge_indexes[i]] = color;
+                }
+            }
+            else {
+                for (int i = 0; i < contour_data.n_of_corners; i++) {
+                    dbg_img.pixels[contour_data.corner_indexes[i]] = color;
+                }
             }
             return true;
         };
@@ -133,22 +278,32 @@ public class Test_01 extends PApplet {
             //println("!");
             img.beginDraw();
             img.background(0);
-            if (false) {
+            if (true) {
                 img.noStroke();
                 img.fill(255);
                 noiseSeed(1);
                 noise_scale += 0.00001f;
-                for (int i=0;i<5000;i++) {
-                    float r = noise(i*noise_scale) * 15;
-                    img.ellipse(noise((i+256)*noise_scale)*img.width, noise((i+1024)*noise_scale)*img.height, r, r);
-                    //img.rect(random(img.width), random(img.height), r, r);
+                if (true) {
+                    for (int i = 0; i < 5000; i++) {
+                        float r = noise(i * noise_scale) * 15;
+                        img.ellipse(noise((i + 256) * noise_scale) * img.width, noise((i + 1024) * noise_scale) * img.height, r, r);
+                        //r *= 3;
+                        //img.rect(noise((i+256)*noise_scale)*img.width, noise((i+1024)*noise_scale)*img.height, r, r);
+                        //img.rect(random(img.width), random(img.height), r, r);
+                    }
+                }
+                else {
+                    img.rect(50, 50, 200, 200);
+                    img.rect(250, 100, 50, 50);
                 }
             }
-            if (true) {
+            else {
                 img.stroke(255);
                 img.noFill();
                 img.line(50,50, 50,600);
-                img.line(50,100, 250,100);
+                img.line(50,99, 250,99);
+                //img.line(50,100, 250,100);
+                img.line(50,101, 250,101);
 
             }
             img.noFill();
@@ -176,7 +331,8 @@ public class Test_01 extends PApplet {
 
         pushStyle();
         colorMode(HSB, 360, 100, 1);
-        scan_id = color(frameCount * 10 % 360, 100, 1);
+        //scan_id = color(-65536 + frameCount);// * 10 % 360, 100, 1);
+        scan_id++;
         popStyle();
 
         //println(frameCount / (360 * 360));
@@ -202,22 +358,23 @@ public class Test_01 extends PApplet {
 
         int time = millis()-start;
 
+        imageMode(CENTER);
 
         if (display_mode == IMG) {
             img.updatePixels();
-            image(img, 0, 0, img.width * scale, img.height * scale);
+            image(img, width/2, height/2, img.width * scale, img.height * scale);
         }
         else if (display_mode == RESULT) {
             dbg_img.updatePixels();
-            image(dbg_img, 0, 0, img.width*scale, img.height*scale);
+            image(dbg_img, width/2, height/2, img.width*scale, img.height*scale);
         }
         else if (display_mode == EDGE_MAP) {
             edge_exist_id_map.updatePixels();
-            image(edge_exist_id_map, 0, 0, img.width * scale, img.height * scale);
+            image(edge_exist_id_map, width/2, height/2, img.width * scale, img.height * scale);
         }
         else if (display_mode == HIT_POINTS) {
             hitpoints.updatePixels();
-            image(hitpoints, 0, 0, img.width * scale, img.height * scale);
+            image(hitpoints, width/2, height/2, img.width * scale, img.height * scale);
         }
 
         //noLoop();
