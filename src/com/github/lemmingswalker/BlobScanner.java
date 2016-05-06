@@ -5,7 +5,7 @@ package com.github.lemmingswalker;
  */
 public class BlobScanner {
 
-    public static boolean debug = true;
+    public static boolean debug = false;
     public static int[] debug_hitpoints;
 
 
@@ -148,6 +148,12 @@ public class BlobScanner {
                             // we need the next index to perform the test
                             do_test_against_first_move = true;
                         }
+                        // use this if we don't want to allow traveling back on the same pixels
+//                        else if (!allow_back_track && contour_exist_scan_id_map[walker_index] == scan_id) {
+//                            //System.out.println("back travel");
+//                            idx -= 1;
+//                            //break;
+//                        }
 
                         contour_data.edge_indexes[idx++] = walker_index;
                         contour_exist_scan_id_map[walker_index] = scan_id;
