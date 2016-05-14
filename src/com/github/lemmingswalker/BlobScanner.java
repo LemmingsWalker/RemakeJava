@@ -1,5 +1,7 @@
 package com.github.lemmingswalker;
 
+import com.sun.istack.internal.NotNull;
+
 /**
  * Created by doekewartena on 4/27/16.
  */
@@ -10,17 +12,18 @@ public class BlobScanner {
 
 
     public static void scan(int[] pixels,
-                           int img_width,
-                           int x1,
-                           int y1,
-                           int x2,
-                           int y2,
-                           int y_increment,
-                           ThresholdChecker threshold_checker,
-                           int[] contour_exist_scan_id_map,
-                           int scan_id,
-                           ContourData contour_data,
-                           ContourDataProcessor contour_data_processor) {
+                            int img_width,
+                            int img_height,
+                            int x1,
+                            int y1,
+                            int x2,
+                            int y2,
+                            int y_increment,
+                   @NotNull ThresholdChecker threshold_checker,
+                   @NotNull int[] contour_exist_scan_id_map,
+                            int scan_id,
+                   @NotNull ContourData contour_data,
+                   @NotNull ContourDataProcessor contour_data_processor) {
 
 
         final int UP = -img_width;
@@ -28,7 +31,13 @@ public class BlobScanner {
         final int LEFT = -1;
         final int RIGHT = 1;
 
-        // todo check input parameters
+        // check input parameters
+        if (x1 < 0 || y1 < 0 || x2 > img_width || y2 > img_height) {
+            // we could also fix values instead
+            System.out.println("Error: BlobScanner.scan(): region of interest is outside image bounds!");
+            return;
+        }
+
 
         // find an edge
         for (int y = y1; y < y2; y += y_increment) {
@@ -52,7 +61,7 @@ public class BlobScanner {
                         continue;
                     }
 
-                    // from here on walk the contour
+                    int start_index = index;
                     int walker_index = index;
 
                     // single pixel test
@@ -63,12 +72,13 @@ public class BlobScanner {
                     if (threshold_checker.result_of(pixels[walker_index + DOWN]))  neighbour_count++;
 
                     if (neighbour_count == 0) {
-                        continue; // single pixel
+                        continue; // single pixel (do we want them?) (if so set contour_exist_scan_id_map earlier)
                     }
 
                     // we come from the left
                     int move_direction = UP;
                     int check_direction = LEFT;
+
 
                     contour_exist_scan_id_map[walker_index] = scan_id;
 
@@ -76,10 +86,14 @@ public class BlobScanner {
                     contour_data.edge_indexes[idx++] = walker_index;
                     contour_data.n_of_corners = 0;
 
-                    int first_move = 0;
+                    boolean start_is_on_corner = !threshold_checker.result_of(pixels[walker_index + move_direction]);
 
-                    boolean do_test_against_first_move = false;
+                    int the_first_move = 0;
 
+                    boolean test_the_first_move_against_the_last_move = false;
+
+
+                    // from here on walk the contour
                     while (true) {
 
                         int next_index = -1;
@@ -132,21 +146,24 @@ public class BlobScanner {
                             contour_data.corner_indexes[contour_data.n_of_corners++] = walker_index;
                         }
 
-                        int the_move = next_index - walker_index;
-                        walker_index += the_move;
+                        int the_last_move = next_index - walker_index;
+                        walker_index = next_index;
 
 
-                        if (first_move == 0) {
-                            first_move = the_move;
+                        if (the_first_move == 0) {
+                            the_first_move = the_last_move;
                         }
-                        else if (do_test_against_first_move) {
-                            if (the_move == first_move) {
+                        else if (test_the_first_move_against_the_last_move) {
+                            if (the_first_move == the_last_move) {
+                                if (!start_is_on_corner) {
+                                    contour_data.corner_indexes[contour_data.n_of_corners++] = contour_data.corner_indexes[0];
+                                }
                                 break;
                             }
                         }
-                        else if (walker_index == index) {
+                        else if (walker_index == start_index) {
                             // we need the next index to perform the test
-                            do_test_against_first_move = true;
+                            test_the_first_move_against_the_last_move = true;
                         }
                         // use this if we don't want to allow traveling back on the same pixels
 //                        else if (!allow_back_track && contour_exist_scan_id_map[walker_index] == scan_id) {
@@ -162,14 +179,12 @@ public class BlobScanner {
 
                     contour_data.length = idx;
 
-                    if (contour_data.length > 0) {
-
-                        // process the result
-                        boolean should_continue = contour_data_processor.process(contour_data);
-                        if (!should_continue) {
-                            return;
-                        }
+                    // process the result
+                    boolean should_continue = contour_data_processor.process(contour_data);
+                    if (!should_continue) {
+                        return;
                     }
+
                 }
             }
         }

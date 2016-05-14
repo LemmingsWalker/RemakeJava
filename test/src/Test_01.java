@@ -3,44 +3,15 @@ import com.github.lemmingswalker.ContourData;
 import com.github.lemmingswalker.ContourDataProcessor;
 import com.github.lemmingswalker.ThresholdChecker;
 import processing.core.PApplet;
+import processing.core.PConstants;
 import processing.core.PGraphics;
 
 /**
  * Created by doekewartena on 4/28/16.
  */
-/*
-INNER BLOB TEST:
-
--use AAARRRGGGBBB
-2 parts for scan_id, 2 part for blob_id?
-
-that would mean 65536 scan_id's and 65536 blob_id's?
--------
-what if we use a new scan_id for each blob we scan?
-We can check if we scanned a blob before with:
-
-if (scan_id >= start_scan_id)
-
-then:
-
-
-[ ][1][ ][ ][2][ ][ ][ ][ ][ ][2][ ][ ][1][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
 
 
 
---------
-blendMode REPLACE (on img)
-
-
-
-
-
-
-
--we first need to know if a blob is closed or not
-
-
- */
 
 /*
 BLOB CLOSED
@@ -49,98 +20,16 @@ BLOB CLOSED
 
  */
 
-/*
- CORNERS
--check old method, should be quite familiar (start is a bitch?)
 
+
+// what if we start on a corner?
+
+
+/*
+
+allow_back_travel
 
  */
-
-/*
-
-count_kernel
-dir_kernel
-
-
-[X][ ][X]
-[X][*][ ]
-[X][ ][X]
-
-
-
-int first_move;
-
-
-
-
-if (walker_index == start_index) {
-
-    if (next_move  == first_move) {
-        // where done
-        break;
-    }
-}
-
-
-
-
-
-
-
-
-if (stop_on_first_return_at_start) {
-
-}
-
-  // check also needs to be updated
-    /*
-    class Step {
-        int new_move_dir;
-        int new_check_dir;
-        int new_walker_index;
-    }
-
-     */
-
-    /*
-
-    move_dir = next_index - last_index;
-
-     */
-
-    /*
-
-    class Walker {
-        int move_direction;
-        int check_direction;
-    }
-
-
-    class ImageData {
-        int width;
-    }
-
-
-
-     */
-
-
-    /*
-
-    int first_move;
-
-
-if (walker_index == start_index) {
-
-    if (next_move  == first_move) {
-        // where done
-        break;
-    }
-}
-     */
-
-
-
 
 
 public class Test_01 extends PApplet {
@@ -152,7 +41,7 @@ public class Test_01 extends PApplet {
     int w = 1024;
     int h = 768;
 
-    PGraphics img;
+    PGraphics pg;
     PGraphics dbg_img;
     PGraphics edge_exist_id_map;
     PGraphics hitpoints;
@@ -174,7 +63,9 @@ public class Test_01 extends PApplet {
     ContourData contour_data;
     ContourDataProcessor contour_data_processor;
 
-    int scan_id = MIN_INT;
+    int scan_id = 1;//MIN_INT;
+
+
 
     @Override
     public void settings() {
@@ -185,14 +76,16 @@ public class Test_01 extends PApplet {
     @Override
     public void setup() {
 
+        BlobScanner.debug = true;
+
         randomSeed(1);
 
-        img = createGraphics(w, h);
-        img.noSmooth();
+        pg = createGraphics(w, h);
+        pg.noSmooth();
 
         dbg_img = createGraphics(w, h);
         dbg_img.beginDraw();
-        dbg_img.image(img, 0, 0);
+        dbg_img.image(pg, 0, 0);
         dbg_img.endDraw();
 
         edge_exist_id_map = createGraphics(w, h);
@@ -209,17 +102,15 @@ public class Test_01 extends PApplet {
 
 
 
-
-
         thresholdChecker = color -> {
             return ((color >> 8) & 0xFF) > 128; // checking green with a threshold of 128
         };
 
 
         contour_data = new ContourData();
-        contour_data.edge_indexes = new int[img.width*img.height/2];  // todo, calculate worst case length for blob (which would be a space filling curve)
-        contour_data.corner_indexes = new int[img.width*img.height/2]; // todo, way to big
-        //contour_data.is_corner = new boolean[img.width*img.height/2];
+        contour_data.edge_indexes = new int[pg.width* pg.height/2];  // todo, calculate worst case length for blob (which would be a space filling curve)
+        contour_data.corner_indexes = new int[pg.width* pg.height/2]; // todo, way to big
+        //contour_data.is_corner = new boolean[pg.width*pg.height/2];
 
 
         contour_data_processor = contourData -> {
@@ -227,12 +118,13 @@ public class Test_01 extends PApplet {
             scan_results++;
             //  println("contour_data.length: "+contour_data.length);
 
-            if (true) {
+            if (false) {
                 for (int i = 0; i < contour_data.length; i++) {
                     dbg_img.pixels[contour_data.edge_indexes[i]] = color;
                 }
             }
             else {
+                println(contour_data.n_of_corners);
                 for (int i = 0; i < contour_data.n_of_corners; i++) {
                     dbg_img.pixels[contour_data.corner_indexes[i]] = color;
                 }
@@ -251,9 +143,9 @@ public class Test_01 extends PApplet {
     public void draw() {
 
         if (display_mode == IMG) {
-            img.beginDraw();
-            img.background(0);
-            img.endDraw();
+            pg.beginDraw();
+            pg.background(0);
+            pg.endDraw();
         }
         else if (display_mode == RESULT) {
             dbg_img.beginDraw();
@@ -261,9 +153,7 @@ public class Test_01 extends PApplet {
             dbg_img.endDraw();
         }
         else if (display_mode == EDGE_MAP) {
-//            edge_exist_id_map.beginDraw();
-//            edge_exist_id_map.background(0);
-//            edge_exist_id_map.endDraw();
+            // don't clear!
         }
         else if (display_mode == HIT_POINTS) {
             hitpoints.beginDraw();
@@ -271,47 +161,70 @@ public class Test_01 extends PApplet {
             hitpoints.endDraw();
         }
 
+        int draw_method = 1;
 
+        pg.beginDraw();
 
-        if (true) {
-
-            //println("!");
-            img.beginDraw();
-            img.background(0);
-            if (true) {
-                img.noStroke();
-                img.fill(255);
-                noiseSeed(1);
-                noise_scale += 0.00001f;
-                if (true) {
-                    for (int i = 0; i < 5000; i++) {
-                        float r = noise(i * noise_scale) * 15;
-                        img.ellipse(noise((i + 256) * noise_scale) * img.width, noise((i + 1024) * noise_scale) * img.height, r, r);
-                        //r *= 3;
-                        //img.rect(noise((i+256)*noise_scale)*img.width, noise((i+1024)*noise_scale)*img.height, r, r);
-                        //img.rect(random(img.width), random(img.height), r, r);
-                    }
-                }
-                else {
-                    img.rect(50, 50, 200, 200);
-                    img.rect(250, 100, 50, 50);
-                }
+        pg.pushStyle();
+        if (draw_method == 0) {
+            pg.background(0);
+            pg.noStroke();
+            pg.fill(255);
+            noiseSeed(1);
+            noise_scale += 0.00001f;
+            for (int i = 0; i < 5000; i++) {
+                float r = noise(i * noise_scale) * 15;
+                pg.ellipse(noise((i + 256) * noise_scale) * pg.width, noise((i + 1024) * noise_scale) * pg.height, r, r);
+                //r *= 3;
+                //pg.rect(noise((i+256)*noise_scale)*pg.width, noise((i+1024)*noise_scale)*pg.height, r, r);
+                //pg.rect(random(pg.width), random(pg.height), r, r);
             }
-            else {
-                img.stroke(255);
-                img.noFill();
-                img.line(50,50, 50,600);
-                img.line(50,99, 250,99);
-                //img.line(50,100, 250,100);
-                img.line(50,101, 250,101);
-
-            }
-            img.noFill();
-            img.stroke(0);
-            img.rect(0,0,img.width-1, img.height-1);
-            img.endDraw();
-            img.loadPixels();
         }
+        else if (draw_method == 1) {
+            pg.background(0);
+            pg.stroke(255);
+            pg.noFill();
+//            pg.line(50,50, 50,600);
+//            pg.line(50,99, 250,99);
+//            //pg.line(50,100, 250,100);
+//            pg.line(50,101, 250,101);
+            pg.noStroke();
+            pg.fill(255);
+            pg.rect(50, 100, 100, 100);
+
+        }
+        else if (draw_method == 2) {
+            pg.background(120);
+            pg.colorMode(HSB, 360, 1 ,1);
+            pg.ellipseMode(CENTER);
+            pg.noStroke();
+            for (int i = 0; i < 100; i++) {
+                float x = random(pg.width);
+                float y = random(pg.height);
+                float r = random(10, 30);
+                pg.fill(random(360), 1, 1);
+                pg.ellipse(x, y, r, r);
+            }
+        }
+        pg.popStyle();
+
+
+        pg.stroke(0);
+        pg.strokeWeight(1);
+        pg.noFill();
+        pg.rect(0,0,pg.width-1, pg.height-1);
+        pg.endDraw();
+        pg.loadPixels();
+
+
+
+
+
+//        if (true) {
+//            image(pg, 0, 0);
+//            return;
+//        }
+
 
         background(255);
 
@@ -321,13 +234,13 @@ public class Test_01 extends PApplet {
 //        int x2 = width-2;
 //        int y2 = height-2;
         int x1 = 0;
-        int y1 = 100;
+        int y1 = 199;
         int x2 = width;
         int y2 = height;
 
         int y_inc = 5;
-        //int[] contour_id_map = new int[img.width * img.height];
-        int scan_id = -65536 + frameCount ;
+        //int[] contour_id_map = new int[pg.width * pg.height];
+        //int scan_id = -65536 + frameCount ;
 
         pushStyle();
         colorMode(HSB, 360, 100, 1);
@@ -341,9 +254,10 @@ public class Test_01 extends PApplet {
 
         scan_results = 0;
 
-        BlobScanner.scan(
-                img.pixels,
-                img.width,
+         BlobScanner.scan(
+                pg.pixels,
+                pg.width,
+                pg.height,
                 x1,
                 y1,
                 x2,
@@ -355,26 +269,28 @@ public class Test_01 extends PApplet {
                 contour_data,
                 contour_data_processor);
 
+        //println(scan_id);
+
 
         int time = millis()-start;
 
         imageMode(CENTER);
 
         if (display_mode == IMG) {
-            img.updatePixels();
-            image(img, width/2, height/2, img.width * scale, img.height * scale);
+            pg.updatePixels();
+            image(pg, width/2, height/2, pg.width * scale, pg.height * scale);
         }
         else if (display_mode == RESULT) {
             dbg_img.updatePixels();
-            image(dbg_img, width/2, height/2, img.width*scale, img.height*scale);
+            image(dbg_img, width/2, height/2, pg.width*scale, pg.height*scale);
         }
         else if (display_mode == EDGE_MAP) {
             edge_exist_id_map.updatePixels();
-            image(edge_exist_id_map, width/2, height/2, img.width * scale, img.height * scale);
+            image(edge_exist_id_map, width/2, height/2, pg.width * scale, pg.height * scale);
         }
         else if (display_mode == HIT_POINTS) {
             hitpoints.updatePixels();
-            image(hitpoints, width/2, height/2, img.width * scale, img.height * scale);
+            image(hitpoints, width/2, height/2, pg.width * scale, pg.height * scale);
         }
 
         //noLoop();
@@ -396,9 +312,7 @@ public class Test_01 extends PApplet {
         else {
             display_mode++;
             if (display_mode == 4) display_mode = 0;
-
-
-
+            println("display_mode: "+display_mode);
         }
 
         //redraw();

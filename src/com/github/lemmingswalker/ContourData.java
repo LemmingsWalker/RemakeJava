@@ -6,9 +6,8 @@ package com.github.lemmingswalker;
 public class ContourData {
     public int length;
     public int[] edge_indexes; // name pixel_indexes?
-    public boolean[] is_corner;
-    public int n_of_corners;
+    //public boolean[] is_corner;
+    public int n_of_corners;   // corner_length?
     public int[] corner_indexes;
-    public boolean save_edges; // prone for error when people set to false and the edge_exist_id_map doesn't update
     // boolean is_closed?
 }
