@@ -8,8 +8,8 @@ package com.github.lemmingswalker;
 public interface ThresholdChecker {
     /**
      *
-     * @param color
+     * @param index
      * @return ... if color is above threshold
      */
-    boolean result_of(int color);
+    boolean result_of(int[] pixels, int index);
 }

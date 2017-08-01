@@ -28,6 +28,13 @@ public class ContourMap extends PApplet {
 
     int scan_id = 1;
 
+    boolean pause = false;
+
+
+    int contours_found;
+
+    int time = 0;
+    int start;
 
     @Override
     public void settings() {
@@ -42,28 +49,43 @@ public class ContourMap extends PApplet {
 
         threshold_checker = new ThresholdChecker() {
             @Override
-            public boolean result_of(int color) {
-                return ((color >> 8) & 0xFF) > threshold; // checking green
+            public boolean result_of(int[] pixels, int index) {
+                return ((pixels[index] >> 8) & 0xFF) > threshold; // checking green
             }
         };
 
         cd = new ContourData();
         cd.corner_indexes = new int[noise.width * noise.height];
-        cd.edge_indexes   = new int[noise.width * noise.height];
+        cd.contour_indexes = new int[noise.width * noise.height];
 
         cdp = new ContourDataProcessor() {
             @Override
             public boolean process(ContourData contour_data) {
+
+                time += millis() - start;
+
+                contours_found++;
                 beginShape();
                 noFill();
                 for (int i = 0; i < contour_data.n_of_corners; i++) {
                     int index = contour_data.corner_indexes[i];
                     float x = index % noise.width;
                     float y = (index - x) / noise.width;
+
+                    if (x < 2 || y < 2 || x > noise.width - 1 || y > noise.height - 1) {
+                        //break;
+                        endShape();
+                        beginShape();
+                        continue;
+                    }
+
                     vertex(x, y);
                     //curveVertex(x, y);
                 }
                 endShape();
+
+                start = millis();
+
             return true;
             }
         };
@@ -77,40 +99,43 @@ public class ContourMap extends PApplet {
     @Override
     public void draw() {
 
-        float noise_scale = 0.1f;
-        float shift = frameCount*0.05f;
-        float scale_2d = sin(frameCount*0.01f); // % TWO_PI) + 1;
-        scale_2d = map(scale_2d, -1, 1, 0.01f, 0.4f);
+        if (!pause) {
+            float noise_scale = 0.1f;
+            float shift = frameCount * 0.05f;
+            float scale_2d = sin(frameCount * 0.01f); // % TWO_PI) + 1;
+            scale_2d = map(scale_2d, -1, 1, 0.01f, 0.4f);
 
 
-        noise.beginDraw();
+            noise.beginDraw();
 
-        for (int y = 0; y < noise.height; y++) {
-            for (int x = 0; x < noise.width; x++) {
-                int _x = x - noise.width/2;
-                int _y = y - noise.height/2;
-                _x += 1000;
-                _y += 1000;
-                float n = noise(_x*noise_scale*scale_2d, _y*noise_scale*scale_2d, shift);
-                noise.set(x, y, color(n*256));
+            for (int y = 0; y < noise.height; y++) {
+                for (int x = 0; x < noise.width; x++) {
+                    int _x = x - noise.width / 2;
+                    int _y = y - noise.height / 2;
+                    _x += 1000;
+                    _y += 1000;
+                    float n = noise(_x * noise_scale * scale_2d, _y * noise_scale * scale_2d, shift);
+                    noise.set(x, y, color(n * 256));
+                }
             }
+            noise.fill(0);
+            noise.textSize(40);
+            noise.textAlign(LEFT, TOP);
+            noise.text("LEMMINGS\nWALKER", 10, 10);
+            noise.noFill();
+            noise.stroke(0);
+            noise.strokeWeight(1);
+            noise.line(0, 0, noise.width, noise.height);
+
+            noise.stroke(0);
+            noise.strokeWeight(1);
+            noise.rect(0, 0, noise.width - 1, noise.height - 1);
+
+            noise.endDraw();
+
+            noise.loadPixels();
         }
-        noise.fill(0);
-        noise.textSize(40);
-        noise.textAlign(LEFT, TOP);
-        noise.text("LEMMINGS\nWALKER", 10, 10);
-        noise.noFill();
-        noise.stroke(0);
-        noise.strokeWeight(1);
-        noise.line(0, 0, noise.width, noise.height);
 
-        noise.stroke(0);
-        noise.strokeWeight(1);
-        noise.rect(0,0,noise.width-1,noise.height-1);
-
-        noise.endDraw();
-
-        noise.loadPixels();
 
         background(0);
 
@@ -118,6 +143,10 @@ public class ContourMap extends PApplet {
 
         pushStyle();
         colorMode(HSB, 256, 256, 256);
+
+        contours_found = 0;
+
+        time = 0;
 
         // wtf?  cause there is no pure white?
         // too check
@@ -130,7 +159,9 @@ public class ContourMap extends PApplet {
             stroke(i, i, i);
             strokeWeight(1);
 
-            BlobScanner.scan(
+            start = millis();
+
+            scan_id += BlobScanner.scan(
                     noise.pixels,
                     noise.width,
                     noise.height,
@@ -138,17 +169,27 @@ public class ContourMap extends PApplet {
                     5,
                     threshold_checker,
                     contour_exist_map,
-                    scan_id++,
+                    scan_id,
                     cd,
                     cdp);
 
+            time += millis() - start; // the last
+
         }
+
+
         popStyle();
 
 
-        image(noise, 256, 0);
+        //image(noise, 256, 0);
 
-        surface.setTitle("fps: "+frameRate);
+        surface.setTitle("fps: "+frameRate+" time: "+time+" contours_found: "+contours_found);
 
+    }
+
+    public void keyPressed() {
+        if (key == 'p') {
+            pause = !pause;
+        }
     }
 }

@@ -3,7 +3,6 @@ import com.github.lemmingswalker.ContourData;
 import com.github.lemmingswalker.ContourDataProcessor;
 import com.github.lemmingswalker.ThresholdChecker;
 import processing.core.PApplet;
-import processing.core.PConstants;
 import processing.core.PGraphics;
 
 /**
@@ -16,7 +15,7 @@ import processing.core.PGraphics;
 /*
 BLOB CLOSED
 - we always meet the start...
--can we calculate based on boundingbox and length?
+-can we calculate based on boundingbox and n_of_indexes?
 
  */
 
@@ -63,7 +62,7 @@ public class Test_01 extends PApplet {
     ContourData contour_data;
     ContourDataProcessor contour_data_processor;
 
-    int scan_id = 1;//MIN_INT;
+    int scan_id = 1;
 
 
 
@@ -76,7 +75,7 @@ public class Test_01 extends PApplet {
     @Override
     public void setup() {
 
-        BlobScanner.debug = true;
+        //BlobScanner.debug = true;
 
         randomSeed(1);
 
@@ -102,25 +101,25 @@ public class Test_01 extends PApplet {
 
 
 
-        thresholdChecker = color -> {
-            return ((color >> 8) & 0xFF) > 128; // checking green with a threshold of 128
+        thresholdChecker = (pixels, index) -> {
+            return ((pixels[index] >> 8) & 0xFF) > 128; // checking green with a threshold of 128
         };
 
 
         contour_data = new ContourData();
-        contour_data.edge_indexes = new int[pg.width* pg.height/2];  // todo, calculate worst case length for blob (which would be a space filling curve)
+        contour_data.contour_indexes = new int[pg.width* pg.height/2];  // todo, calculate worst case n_of_indexes for blob (which would be a space filling curve)
         contour_data.corner_indexes = new int[pg.width* pg.height/2]; // todo, way to big
-        //contour_data.is_corner = new boolean[pg.width*pg.height/2];
+        //contour_data.is_corner = new boolean[mask.width*mask.height/2];
 
 
         contour_data_processor = contourData -> {
             int color = color(0,255,0);
             scan_results++;
-            //  println("contour_data.length: "+contour_data.length);
+            //  println("contour_data.n_of_indexes: "+contour_data.n_of_indexes);
 
             if (false) {
-                for (int i = 0; i < contour_data.length; i++) {
-                    dbg_img.pixels[contour_data.edge_indexes[i]] = color;
+                for (int i = 0; i < contour_data.n_of_indexes; i++) {
+                    dbg_img.pixels[contour_data.contour_indexes[i]] = color;
                 }
             }
             else {
@@ -132,7 +131,7 @@ public class Test_01 extends PApplet {
             return true;
         };
 
-        BlobScanner.debug_hitpoints = hitpoints.pixels;
+        //BlobScanner.debug_hitpoints = hitpoints.pixels;
 
 
     }
@@ -161,7 +160,7 @@ public class Test_01 extends PApplet {
             hitpoints.endDraw();
         }
 
-        int draw_method = 1;
+        int draw_method = 0;
 
         pg.beginDraw();
 
@@ -176,18 +175,18 @@ public class Test_01 extends PApplet {
                 float r = noise(i * noise_scale) * 15;
                 pg.ellipse(noise((i + 256) * noise_scale) * pg.width, noise((i + 1024) * noise_scale) * pg.height, r, r);
                 //r *= 3;
-                //pg.rect(noise((i+256)*noise_scale)*pg.width, noise((i+1024)*noise_scale)*pg.height, r, r);
-                //pg.rect(random(pg.width), random(pg.height), r, r);
+                //mask.rect(noise((i+256)*noise_scale)*mask.width, noise((i+1024)*noise_scale)*mask.height, r, r);
+                //mask.rect(random(mask.width), random(mask.height), r, r);
             }
         }
         else if (draw_method == 1) {
             pg.background(0);
             pg.stroke(255);
             pg.noFill();
-//            pg.line(50,50, 50,600);
-//            pg.line(50,99, 250,99);
-//            //pg.line(50,100, 250,100);
-//            pg.line(50,101, 250,101);
+//            mask.line(50,50, 50,600);
+//            mask.line(50,99, 250,99);
+//            //mask.line(50,100, 250,100);
+//            mask.line(50,101, 250,101);
             pg.noStroke();
             pg.fill(255);
             pg.rect(50, 100, 100, 100);
@@ -221,7 +220,7 @@ public class Test_01 extends PApplet {
 
 
 //        if (true) {
-//            image(pg, 0, 0);
+//            image(mask, 0, 0);
 //            return;
 //        }
 
@@ -239,7 +238,7 @@ public class Test_01 extends PApplet {
         int y2 = height;
 
         int y_inc = 5;
-        //int[] contour_id_map = new int[pg.width * pg.height];
+        //int[] contour_id_map = new int[mask.width * mask.height];
         //int scan_id = -65536 + frameCount ;
 
         pushStyle();
@@ -254,7 +253,7 @@ public class Test_01 extends PApplet {
 
         scan_results = 0;
 
-         BlobScanner.scan(
+        scan_id += BlobScanner.scan(
                 pg.pixels,
                 pg.width,
                 pg.height,
